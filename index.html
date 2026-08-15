@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SkillSpring – IXL 2</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div class="app">
+
+  <!-- HEADER -->
+  <header>
+    <div class="logo">SkillSpring</div>
+    <nav class="nav">
+      <button data-page="home" class="active">Home</button>
+      <button data-page="skills">Skills</button>
+      <button data-page="practice">Practice</button>
+      <button data-page="grades">Grades</button>
+      <button data-page="rewards">Rewards</button>
+      <button data-page="games">Games</button>
+      <button data-page="parent">Parent</button>
+      <button data-page="settings">Settings</button>
+    </nav>
+  </header>
+
+  <!-- HOME -->
+  <section id="home" class="page active">
+    <h1 id="greeting">Welcome, Student! 👋</h1>
+    <p class="muted">Keep practicing and level up your skills.</p>
+
+    <div class="stats-row">
+      <div class="stat-box"><span class="muted">Mastery</span><strong id="masteryStat">0%</strong></div>
+      <div class="stat-box"><span class="muted">Score</span><strong id="scoreStat">0</strong></div>
+      <div class="stat-box"><span class="muted">Answered</span><strong id="answeredStat">0</strong></div>
+      <div class="stat-box"><span class="muted">Streak</span><strong id="streakStat">0 🔥</strong></div>
+      <div class="stat-box"><span class="muted">Level</span><strong id="levelStat">1</strong></div>
+      <div class="stat-box"><span class="muted">Coins</span><strong id="coinStat">20 🪙</strong></div>
+      <div class="stat-box"><span class="muted">Accuracy</span><strong id="accuracyStat">0%</strong></div>
+    </div>
+
+    <div class="card" style="margin-bottom:20px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;">
+        <div>
+          <strong id="levelBadge">Beginner</strong>
+          <div class="muted" id="xpText">0 / 100 XP</div>
+        </div>
+      </div>
+      <div class="progress"><i id="xpBar" style="width:0%"></i></div>
+      <div class="progress" style="margin-top:8px;"><i id="masteryBar" style="width:0%"></i></div>
+      <div class="progress" style="margin-top:8px;"><i id="accuracyBar" style="width:0%"></i></div>
+    </div>
+
+    <h2 style="margin:24px 0 12px;">Subjects</h2>
+    <div id="subjectGrid" class="grid"></div>
+  </section>
+
+  <!-- SKILLS -->
+  <section id="skills" class="page">
+    <h1>Skills</h1>
+    <div id="subjectFilters" style="display:flex;gap:8px;flex-wrap:wrap;margin:16px 0;"></div>
+    <div id="skillList"></div>
+  </section>
+
+  <!-- PRACTICE -->
+  <section id="practice" class="page">
+    <h1>Practice</h1>
+    <p class="muted" style="margin-bottom:16px;">Choose a subject to start practicing.</p>
+    <div id="practiceCards" class="grid"></div>
+  </section>
+
+  <!-- GRADES -->
+  <section id="grades" class="page">
+    <h1>Grades & Activity</h1>
+    <div id="gradeCards" class="grid" style="margin:16px 0;"></div>
+    <div class="card">
+      <h2 style="margin-bottom:12px;">Recent Activity</h2>
+      <div id="activity"></div>
+    </div>
+  </section>
+
+  <!-- REWARDS -->
+  <section id="rewards" class="page">
+    <h1>Rewards & Achievements</h1>
+
+    <div class="stats-row">
+      <div class="stat-box"><span class="muted">Level</span><strong id="rewardLevel">1</strong></div>
+      <div class="stat-box"><span class="muted">XP</span><strong id="rewardXP">0</strong></div>
+      <div class="stat-box"><span class="muted">Coins</span><strong id="rewardCoins">20 🪙</strong></div>
+      <div class="stat-box"><span class="muted">Achievements</span><strong id="achievementCount">0/10</strong></div>
+    </div>
+
+    <h2 style="margin:20px 0 12px;">Achievements</h2>
+    <div id="achievementGrid" class="grid"></div>
+
+    <h2 style="margin:28px 0 12px;">Milestones</h2>
+    <div class="card" id="milestones"></div>
+  </section>
+
+  <!-- GAMES -->
+  <section id="games" class="page">
+    <h1>Games</h1>
+    <p class="muted" style="margin-bottom:16px;">Spend coins to play fun games and earn more rewards!</p>
+
+    <div class="grid">
+      <div class="card">
+        <div style="font-size:2.5rem;">🪙</div>
+        <h2>Coin Catcher</h2>
+        <p class="muted">Catch falling coins for 20 seconds.</p>
+        <p><strong>5 coins</strong></p>
+        <button class="btn" id="startCoinGame" style="margin-top:10px;">Play</button>
+      </div>
+
+      <div class="card">
+        <div style="font-size:2.5rem;">🧠</div>
+        <h2>Memory Match</h2>
+        <p class="muted">Find all 8 matching pairs.</p>
+        <p><strong>8 coins</strong></p>
+        <button class="btn" id="startMemoryGame" style="margin-top:10px;">Play</button>
+      </div>
+
+      <div class="card">
+        <div style="font-size:2.5rem;">⚡</div>
+        <h2>Math Rush</h2>
+        <p class="muted">Solve as many problems as you can in 30 seconds.</p>
+        <p><strong>10 coins</strong></p>
+        <button class="btn" id="startMathGame" style="margin-top:10px;">Play</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- PARENT -->
+  <section id="parent" class="page">
+    <h1>Parent Dashboard</h1>
+    <div id="parentContent"></div>
+  </section>
+
+  <!-- SETTINGS -->
+  <section id="settings" class="page">
+    <h1>Settings</h1>
+
+    <div class="card" style="margin-bottom:20px;">
+      <h2>Profile</h2>
+      <label>Student Name</label>
+      <input type="text" id="nameInput" placeholder="Student">
+      <label>Grade</label>
+      <select id="gradeInput">
+        <option value="3">3</option>
+        <option value="4">4</option>
+        <option value="5">5</option>
+        <option value="6" selected>6</option>
+        <option value="7">7</option>
+        <option value="8">8</option>
+      </select>
+      <button class="btn" id="saveProfile" style="margin-top:16px;">Save Profile</button>
+    </div>
+
+    <div class="card" style="margin-bottom:20px;">
+      <h2>Groq AI</h2>
+      <div id="aiStatus" style="margin-bottom:12px;"></div>
+      <label>API Key</label>
+      <input type="password" id="apiKey" placeholder="gsk_...">
+      <label>Model</label>
+      <input type="text" id="modelName" placeholder="llama-3.3-70b-versatile">
+      <button class="btn" id="saveAI" style="margin-top:16px;">Save AI Settings</button>
+    </div>
+
+    <div class="card" style="margin-bottom:20px;">
+      <h2>Parent PIN</h2>
+      <label>4–6 digit PIN (leave blank to remove)</label>
+      <input type="password" id="parentPinInput" placeholder="••••">
+      <button class="btn" id="saveParentPin" style="margin-top:16px;">Save PIN</button>
+    </div>
+
+    <div class="card">
+      <h2>Danger Zone</h2>
+      <p class="muted">This will erase all progress, mastery, coins, and achievements.</p>
+      <button class="btn" id="resetProgress" style="margin-top:12px;background:#ef4444;">Reset All Progress</button>
+    </div>
+  </section>
+
+</div>
+
+<!-- QUIZ MODAL -->
+<div class="modal" id="quizModal">
+  <div class="modal-content">
+    <div class="modal-header">
+      <div>
+        <div class="muted" id="quizSkill">Math • Fractions</div>
+        <div style="font-weight:700;" id="quizProgress">Question 1 of 5</div>
+      </div>
+      <button class="close-btn" id="closeQuiz">×</button>
+    </div>
+
+    <div id="questionText">Loading...</div>
+    <div id="answers"></div>
+    <div class="feedback" id="feedback"></div>
+
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-top:16px;">
+      <div class="muted" id="generationInfo"></div>
+      <button class="btn" id="nextQuestion" style="display:none;">Next →</button>
+    </div>
+  </div>
+</div>
+
+<!-- GAME MODAL -->
+<div class="modal" id="gameModal">
+  <div class="modal-content" style="max-width:640px;padding:0;overflow:hidden;">
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:16px 20px;border-bottom:1px solid var(--border);">
+      <strong id="gameTitle">Game</strong>
+      <button class="close-btn" id="closeGame">×</button>
+    </div>
+    <div id="gameContainer"></div>
+  </div>
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>
