@@ -1,0 +1,2157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Chess vs Groq</title>
+<style>
+*{box-sizing:border-box}
+html,body{margin:0;width:100%;height:100%;overflow:hidden}
+body{
+    background:#151922;
+    color:white;
+    font-family:Arial,sans-serif;
+    display:flex;
+    justify-content:center;
+    align-items:center
+}
+.game{
+    width:100%;
+    height:100%;
+    max-width:760px;
+    padding:8px;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center
+}
+h1{
+    margin:0 0 3px;
+    font-size:clamp(21px,4vw,31px)
+}
+#status{
+    min-height:20px;
+    margin-bottom:6px;
+    font-size:clamp(13px,2.5vw,17px);
+    text-align:center;
+    color:#d1d5db
+}
+#board{
+    width:min(calc(100vw - 16px),calc(100vh - 175px),640px);
+    aspect-ratio:1/1;
+    display:grid;
+    grid-template-columns:repeat(8,1fr);
+    grid-template-rows:repeat(8,1fr);
+    flex:0 0 auto;
+    border:5px solid #080a0f;
+    border-radius:6px;
+    overflow:hidden;
+    box-shadow:0 20px 50px rgba(0,0,0,.5)
+}
+.square{
+    position:relative;
+    width:100%;
+    height:100%;
+    min-width:0;
+    min-height:0;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    cursor:pointer;
+    user-select:none;
+    font-size:clamp(25px,7vw,64px)
+}
+.light{background:#f0d9b5}
+.dark{background:#8b5a36}
+.square:hover{filter:brightness(1.08)}
+.white-piece{
+    color:#fff;
+    text-shadow:0 2px 0 #777,0 3px 5px rgba(0,0,0,.8)
+}
+.black-piece{
+    color:#111;
+    text-shadow:0 2px 2px rgba(255,255,255,.4),0 3px 5px rgba(0,0,0,.8)
+}
+.selected{box-shadow:inset 0 0 0 5px #ffd43b}
+.legal{box-shadow:inset 0 0 0 5px #35d07f}
+.capture{box-shadow:inset 0 0 0 5px #ef5350}
+.in-check{box-shadow:inset 0 0 0 6px #ff3333}
+.coordinate{
+    position:absolute;
+    z-index:2;
+    font-size:clamp(8px,1.7vw,13px);
+    font-weight:bold;
+    line-height:1;
+    pointer-events:none
+}
+.rank{top:4px;left:5px}
+.file{bottom:4px;right:5px}
+.light .coordinate{color:#8b5a36}
+.dark .coordinate{color:#f0d9b5}
+
+#controls{
+    display:flex;
+    gap:7px;
+    flex-wrap:wrap;
+    justify-content:center
+}
+button{
+    margin-top:6px;
+    padding:7px 14px;
+    border:none;
+    border-radius:8px;
+    background:white;
+    color:#111827;
+    font-size:13px;
+    font-weight:bold;
+    cursor:pointer
+}
+button:hover{background:#e5e7eb}
+#groqBox{
+    display:flex;
+    align-items:center;
+    gap:6px;
+    width:min(100%,640px);
+    margin-top:6px
+}
+#apiKey{
+    flex:1;
+    min-width:0;
+    padding:8px;
+    border:none;
+    border-radius:7px;
+    background:#252a35;
+    color:white;
+    outline:none
+}
+#apiKey::placeholder{color:#9ca3af}
+#aiThinking{
+    display:none;
+    margin-top:3px;
+    font-size:13px;
+    color:#9ca3af
+}
+#engineBox{
+    width:min(100%,640px);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:8px;
+    margin-top:5px;
+    font-size:12px;
+    color:#cbd5e1
+}
+#strength{
+    width:130px
+}
+#engineLabel{
+    min-width:70px
+}
+#promotionOverlay{
+    position:fixed;
+    inset:0;
+    display:none;
+    align-items:center;
+    justify-content:center;
+    background:rgba(0,0,0,.65);
+    z-index:100
+}
+#promotionBox{
+    background:#20242e;
+    padding:20px;
+    border-radius:14px;
+    text-align:center;
+    box-shadow:0 15px 50px rgba(0,0,0,.6)
+}
+#promotionBox h2{
+    margin:0 0 15px;
+    font-size:20px
+}
+#promotionChoices{
+    display:flex;
+    gap:10px
+}
+.promotionButton{
+    width:65px;
+    height:65px;
+    margin:0;
+    padding:0;
+    font-size:42px;
+    border-radius:10px
+}
+@media(max-height:600px){
+    .game{padding:4px}
+    h1{font-size:21px}
+    #status{margin-bottom:3px}
+    #board{
+        width:min(calc(100vw - 8px),calc(100vh - 125px),520px)
+    }
+    button{
+        margin-top:3px;
+        padding:5px 10px
+    }
+    #groqBox{margin-top:3px}
+    #engineBox{margin-top:2px}
+}
+</style>
+</head>
+
+<body>
+<div class="game">
+
+<h1>♟ Chess vs Groq 🤖</h1>
+
+<div id="status">White to move</div>
+
+<div id="board"></div>
+
+<div id="aiThinking">🤖 Groq + Chess Engine is thinking...</div>
+
+<div id="engineBox">
+    <span>Strength</span>
+    <input id="strength" type="range" min="1" max="5" value="3">
+    <span id="engineLabel">Balanced</span>
+</div>
+
+<div id="controls">
+    <button onclick="restartGame()">🔄 Restart</button>
+</div>
+
+<div id="groqBox">
+    <input id="apiKey" type="password" placeholder="Paste your Groq API key here">
+    <button onclick="saveKey()">Save Key</button>
+</div>
+
+</div>
+
+<div id="promotionOverlay">
+<div id="promotionBox">
+    <h2>Choose promotion</h2>
+    <div id="promotionChoices"></div>
+</div>
+</div>
+
+<script>
+/* =========================================================
+   GROQ
+========================================================= */
+
+const GROQ_ENDPOINT="https://api.groq.com/openai/v1/chat/completions";
+const GROQ_MODEL="openai/gpt-oss-20b";
+
+let GROQ_API_KEY=localStorage.getItem("groqChessKey")||"";
+
+if(GROQ_API_KEY){
+    document.getElementById("apiKey").value=GROQ_API_KEY;
+}
+
+/* =========================================================
+   PIECES
+========================================================= */
+
+const PIECES={
+    wK:"♔",wQ:"♕",wR:"♖",wB:"♗",wN:"♘",wP:"♙",
+    bK:"♚",bQ:"♛",bR:"♜",bB:"♝",bN:"♞",bP:"♟"
+};
+
+const VALUES={
+    P:100,
+    N:320,
+    B:330,
+    R:500,
+    Q:900,
+    K:20000
+};
+
+/* =========================================================
+   PIECE-SQUARE TABLES
+   Values are from White's perspective.
+========================================================= */
+
+const PST={
+P:[
+0,0,0,0,0,0,0,0,
+50,50,50,50,50,50,50,50,
+10,10,20,30,30,20,10,10,
+5,5,10,27,27,10,5,5,
+0,0,0,25,25,0,0,0,
+5,-5,-10,0,0,-10,-5,5,
+5,10,10,-25,-25,10,10,5,
+0,0,0,0,0,0,0,0
+],
+N:[
+-50,-40,-30,-30,-30,-30,-40,-50,
+-40,-20,0,5,5,0,-20,-40,
+-30,5,10,15,15,10,5,-30,
+-30,0,15,20,20,15,0,-30,
+-30,5,15,20,20,15,5,-30,
+-30,0,10,15,15,10,0,-30,
+-40,-20,0,0,0,0,-20,-40,
+-50,-40,-30,-30,-30,-30,-40,-50
+],
+B:[
+-20,-10,-10,-10,-10,-10,-10,-20,
+-10,0,0,0,0,0,0,-10,
+-10,0,5,10,10,5,0,-10,
+-10,5,5,10,10,5,5,-10,
+-10,0,10,10,10,10,0,-10,
+-10,10,10,10,10,10,10,-10,
+-10,5,0,0,0,0,5,-10,
+-20,-10,-10,-10,-10,-10,-10,-20
+],
+R:[
+0,0,0,5,5,0,0,0,
+-5,0,0,0,0,0,0,-5,
+-5,0,0,0,0,0,0,-5,
+-5,0,0,0,0,0,0,-5,
+-5,0,0,0,0,0,0,-5,
+-5,0,0,0,0,0,0,-5,
+5,10,10,10,10,10,10,5,
+0,0,0,0,0,0,0,0
+],
+Q:[
+-20,-10,-10,0,0,-10,-10,-20,
+-10,0,0,0,0,0,0,-10,
+-10,0,5,5,5,5,0,-10,
+0,0,5,5,5,5,0,-5,
+-5,0,5,5,5,5,0,-5,
+-10,5,5,5,5,5,0,-10,
+-10,0,5,0,0,0,0,-10,
+-20,-10,-10,0,0,-10,-10,-20
+],
+K:[
+-30,-40,-40,-50,-50,-40,-40,-30,
+-30,-40,-40,-50,-50,-40,-40,-30,
+-30,-40,-40,-50,-50,-40,-40,-30,
+-30,-40,-40,-50,-50,-40,-40,-30,
+-20,-30,-30,-40,-40,-30,-30,-20,
+-10,-20,-20,-20,-20,-20,-20,-10,
+20,20,0,0,0,0,20,20,
+20,30,10,0,0,10,30,20
+]
+};
+
+/* =========================================================
+   START POSITION
+========================================================= */
+
+const STARTING_BOARD=[
+["bR","bN","bB","bQ","bK","bB","bN","bR"],
+["bP","bP","bP","bP","bP","bP","bP","bP"],
+[null,null,null,null,null,null,null,null],
+[null,null,null,null,null,null,null,null],
+[null,null,null,null,null,null,null,null],
+[null,null,null,null,null,null,null,null],
+["wP","wP","wP","wP","wP","wP","wP","wP"],
+["wR","wN","wB","wQ","wK","wB","wN","wR"]
+];
+
+/* =========================================================
+   STATE
+========================================================= */
+
+let board=cloneBoard(STARTING_BOARD);
+let turn="w";
+let selected=null;
+let legalMoves=[];
+let gameOver=false;
+let pendingPromotion=null;
+let enPassantTarget=null;
+
+let castling={
+    wK:true,
+    wQ:true,
+    bK:true,
+    bQ:true
+};
+
+let moveHistory=[];
+
+/* =========================================================
+   HELPERS
+========================================================= */
+
+function cloneBoard(position){
+    return position.map(row=>[...row]);
+}
+
+function isInside(row,col){
+    return row>=0&&row<8&&col>=0&&col<8;
+}
+
+function colorOf(piece){
+    return piece?piece[0]:null;
+}
+
+function typeOf(piece){
+    return piece?piece[1]:null;
+}
+
+function opposite(color){
+    return color==="w"?"b":"w";
+}
+
+function squareName(row,col){
+    return "abcdefgh"[col]+(8-row);
+}
+
+function moveToUCI(move,promotion=null){
+    let text=
+        squareName(move.from.row,move.from.col)+
+        squareName(move.to.row,move.to.col);
+
+    if(promotion)text+=promotion.toLowerCase();
+
+    return text;
+}
+
+function getStrength(){
+    return Number(document.getElementById("strength").value);
+}
+
+function updateStrengthLabel(){
+    const labels={
+        1:"Casual",
+        2:"Beginner",
+        3:"Balanced",
+        4:"Strong",
+        5:"Very Strong"
+    };
+    document.getElementById("engineLabel").textContent=
+        labels[getStrength()];
+}
+
+document.getElementById("strength").addEventListener(
+    "input",
+    updateStrengthLabel
+);
+
+updateStrengthLabel();
+
+/* =========================================================
+   KING
+========================================================= */
+
+function findKing(position,color){
+    for(let row=0;row<8;row++){
+        for(let col=0;col<8;col++){
+            if(position[row][col]===color+"K"){
+                return{row,col};
+            }
+        }
+    }
+    return null;
+}
+
+/* =========================================================
+   ATTACK DETECTION
+========================================================= */
+
+function isSquareAttacked(position,row,col,attackerColor){
+
+    const pawnRow=attackerColor==="w"?row+1:row-1;
+
+    for(const dc of[-1,1]){
+        const c=col+dc;
+        if(
+            isInside(pawnRow,c)&&
+            position[pawnRow][c]===attackerColor+"P"
+        )return true;
+    }
+
+    const knightMoves=[
+        [-2,-1],[-2,1],[-1,-2],[-1,2],
+        [1,-2],[1,2],[2,-1],[2,1]
+    ];
+
+    for(const[dr,dc]of knightMoves){
+        const r=row+dr,c=col+dc;
+        if(
+            isInside(r,c)&&
+            position[r][c]===attackerColor+"N"
+        )return true;
+    }
+
+    for(let dr=-1;dr<=1;dr++){
+        for(let dc=-1;dc<=1;dc++){
+            if(dr===0&&dc===0)continue;
+            const r=row+dr,c=col+dc;
+            if(
+                isInside(r,c)&&
+                position[r][c]===attackerColor+"K"
+            )return true;
+        }
+    }
+
+    const straight=[
+        [-1,0],[1,0],[0,-1],[0,1]
+    ];
+
+    for(const[dr,dc]of straight){
+        let r=row+dr,c=col+dc;
+
+        while(isInside(r,c)){
+            const piece=position[r][c];
+
+            if(piece){
+                if(
+                    colorOf(piece)===attackerColor&&
+                    (typeOf(piece)==="R"||typeOf(piece)==="Q")
+                )return true;
+                break;
+            }
+
+            r+=dr;
+            c+=dc;
+        }
+    }
+
+    const diagonal=[
+        [-1,-1],[-1,1],[1,-1],[1,1]
+    ];
+
+    for(const[dr,dc]of diagonal){
+        let r=row+dr,c=col+dc;
+
+        while(isInside(r,c)){
+            const piece=position[r][c];
+
+            if(piece){
+                if(
+                    colorOf(piece)===attackerColor&&
+                    (typeOf(piece)==="B"||typeOf(piece)==="Q")
+                )return true;
+                break;
+            }
+
+            r+=dr;
+            c+=dc;
+        }
+    }
+
+    return false;
+}
+
+function isInCheck(position,color){
+    const king=findKing(position,color);
+    if(!king)return true;
+
+    return isSquareAttacked(
+        position,
+        king.row,
+        king.col,
+        opposite(color)
+    );
+}
+
+/* =========================================================
+   APPLY MOVE TO COPY
+========================================================= */
+
+function makeMoveOnBoard(position,move){
+
+    const newBoard=cloneBoard(position);
+
+    const piece=
+        newBoard[move.from.row][move.from.col];
+
+    newBoard[move.from.row][move.from.col]=null;
+
+    if(move.castle==="king"){
+        newBoard[move.to.row][6]=piece;
+        newBoard[move.to.row][5]=
+            newBoard[move.to.row][7];
+        newBoard[move.to.row][7]=null;
+        return newBoard;
+    }
+
+    if(move.castle==="queen"){
+        newBoard[move.to.row][2]=piece;
+        newBoard[move.to.row][3]=
+            newBoard[move.to.row][0];
+        newBoard[move.to.row][0]=null;
+        return newBoard;
+    }
+
+    if(move.enPassant){
+        newBoard[move.from.row][move.to.col]=null;
+    }
+
+    newBoard[move.to.row][move.to.col]=piece;
+
+    if(
+        typeOf(piece)==="P"&&
+        (move.to.row===0||move.to.row===7)
+    ){
+        newBoard[move.to.row][move.to.col]=
+            colorOf(piece)+"Q";
+    }
+
+    return newBoard;
+}
+
+/* =========================================================
+   MOVE GENERATION
+========================================================= */
+
+function generatePseudoMoves(
+    position,
+    row,
+    col,
+    color,
+    includeCastling=true
+){
+
+    const piece=position[row][col];
+
+    if(!piece||colorOf(piece)!==color)return[];
+
+    const type=typeOf(piece);
+    const moves=[];
+
+    function addMove(toRow,toCol,extra={}){
+        if(!isInside(toRow,toCol))return;
+
+        const target=position[toRow][toCol];
+
+        if(!target||colorOf(target)!==color){
+            moves.push({
+                from:{row,col},
+                to:{row:toRow,col:toCol},
+                ...extra
+            });
+        }
+    }
+
+    function slide(directions){
+        for(const[dr,dc]of directions){
+            let r=row+dr,c=col+dc;
+
+            while(isInside(r,c)){
+                const target=position[r][c];
+
+                if(!target){
+                    moves.push({
+                        from:{row,col},
+                        to:{row:r,col:c}
+                    });
+                }else{
+                    if(colorOf(target)!==color){
+                        moves.push({
+                            from:{row,col},
+                            to:{row:r,col:c}
+                        });
+                    }
+                    break;
+                }
+
+                r+=dr;
+                c+=dc;
+            }
+        }
+    }
+
+    if(type==="P"){
+        const direction=color==="w"?-1:1;
+        const startRow=color==="w"?6:1;
+        const one=row+direction;
+
+        if(
+            isInside(one,col)&&
+            !position[one][col]
+        ){
+            moves.push({
+                from:{row,col},
+                to:{row:one,col}
+            });
+
+            const two=row+direction*2;
+
+            if(
+                row===startRow&&
+                !position[two][col]
+            ){
+                moves.push({
+                    from:{row,col},
+                    to:{row:two,col}
+                });
+            }
+        }
+
+        for(const dc of[-1,1]){
+            const r=row+direction;
+            const c=col+dc;
+
+            if(!isInside(r,c))continue;
+
+            const target=position[r][c];
+
+            if(target&&colorOf(target)!==color){
+                moves.push({
+                    from:{row,col},
+                    to:{row:r,col:c}
+                });
+            }
+
+            if(
+                enPassantTarget&&
+                enPassantTarget.row===r&&
+                enPassantTarget.col===c
+            ){
+                moves.push({
+                    from:{row,col},
+                    to:{row:r,col:c},
+                    enPassant:true
+                });
+            }
+        }
+    }
+
+    if(type==="N"){
+        const jumps=[
+            [-2,-1],[-2,1],[-1,-2],[-1,2],
+            [1,-2],[1,2],[2,-1],[2,1]
+        ];
+
+        for(const[dr,dc]of jumps){
+            addMove(row+dr,col+dc);
+        }
+    }
+
+    if(type==="B"){
+        slide([
+            [-1,-1],[-1,1],
+            [1,-1],[1,1]
+        ]);
+    }
+
+    if(type==="R"){
+        slide([
+            [-1,0],[1,0],
+            [0,-1],[0,1]
+        ]);
+    }
+
+    if(type==="Q"){
+        slide([
+            [-1,-1],[-1,1],
+            [1,-1],[1,1],
+            [-1,0],[1,0],
+            [0,-1],[0,1]
+        ]);
+    }
+
+    if(type==="K"){
+        for(let dr=-1;dr<=1;dr++){
+            for(let dc=-1;dc<=1;dc++){
+                if(dr===0&&dc===0)continue;
+                addMove(row+dr,col+dc);
+            }
+        }
+
+        if(
+            includeCastling&&
+            row===(color==="w"?7:0)&&
+            col===4&&
+            !isInCheck(position,color)
+        ){
+            const homeRow=color==="w"?7:0;
+
+            const kingSide=
+                color==="w"?castling.wK:castling.bK;
+
+            if(
+                kingSide&&
+                position[homeRow][5]===null&&
+                position[homeRow][6]===null&&
+                position[homeRow][7]===color+"R"&&
+                !isSquareAttacked(
+                    position,
+                    homeRow,
+                    5,
+                    opposite(color)
+                )&&
+                !isSquareAttacked(
+                    position,
+                    homeRow,
+                    6,
+                    opposite(color)
+                )
+            ){
+                moves.push({
+                    from:{row:homeRow,col:4},
+                    to:{row:homeRow,col:6},
+                    castle:"king"
+                });
+            }
+
+            const queenSide=
+                color==="w"?castling.wQ:castling.bQ;
+
+            if(
+                queenSide&&
+                position[homeRow][1]===null&&
+                position[homeRow][2]===null&&
+                position[homeRow][3]===null&&
+                position[homeRow][0]===color+"R"&&
+                !isSquareAttacked(
+                    position,
+                    homeRow,
+                    3,
+                    opposite(color)
+                )&&
+                !isSquareAttacked(
+                    position,
+                    homeRow,
+                    2,
+                    opposite(color)
+                )
+            ){
+                moves.push({
+                    from:{row:homeRow,col:4},
+                    to:{row:homeRow,col:2},
+                    castle:"queen"
+                });
+            }
+        }
+    }
+
+    return moves;
+}
+
+function getLegalMovesForPiece(position,row,col,color){
+    return generatePseudoMoves(
+        position,row,col,color
+    ).filter(move=>{
+        const test=makeMoveOnBoard(position,move);
+        return !isInCheck(test,color);
+    });
+}
+
+function getAllLegalMoves(position,color){
+    const moves=[];
+
+    for(let row=0;row<8;row++){
+        for(let col=0;col<8;col++){
+            if(colorOf(position[row][col])===color){
+                moves.push(
+                    ...getLegalMovesForPiece(
+                        position,row,col,color
+                    )
+                );
+            }
+        }
+    }
+
+    return moves;
+}
+
+/* =========================================================
+   CASTLING RIGHTS
+========================================================= */
+
+function updateCastlingRights(
+    piece,
+    from,
+    to,
+    captured
+){
+    if(!piece)return;
+
+    const color=colorOf(piece);
+    const type=typeOf(piece);
+
+    if(type==="K"){
+        if(color==="w"){
+            castling.wK=false;
+            castling.wQ=false;
+        }else{
+            castling.bK=false;
+            castling.bQ=false;
+        }
+    }
+
+    if(type==="R"){
+        if(color==="w"&&from.row===7&&from.col===0)
+            castling.wQ=false;
+
+        if(color==="w"&&from.row===7&&from.col===7)
+            castling.wK=false;
+
+        if(color==="b"&&from.row===0&&from.col===0)
+            castling.bQ=false;
+
+        if(color==="b"&&from.row===0&&from.col===7)
+            castling.bK=false;
+    }
+
+    if(captured==="wR"&&to.row===7&&to.col===0)
+        castling.wQ=false;
+
+    if(captured==="wR"&&to.row===7&&to.col===7)
+        castling.wK=false;
+
+    if(captured==="bR"&&to.row===0&&to.col===0)
+        castling.bQ=false;
+
+    if(captured==="bR"&&to.row===0&&to.col===7)
+        castling.bK=false;
+}
+
+/* =========================================================
+   POSITION EVALUATION
+========================================================= */
+
+function evaluateBoard(position){
+
+    let score=0;
+
+    let whiteBishops=0;
+    let blackBishops=0;
+
+    let whitePieces=0;
+    let blackPieces=0;
+
+    for(let row=0;row<8;row++){
+        for(let col=0;col<8;col++){
+
+            const piece=position[row][col];
+
+            if(!piece)continue;
+
+            const color=colorOf(piece);
+            const type=typeOf(piece);
+
+            if(color==="w")whitePieces++;
+            else blackPieces++;
+
+            if(type==="B"){
+                if(color==="w")whiteBishops++;
+                else blackBishops++;
+            }
+
+            let value=VALUES[type];
+
+            let tableIndex=row*8+col;
+
+            if(color==="b"){
+                tableIndex=(7-row)*8+col;
+            }
+
+            if(PST[type]){
+                value+=PST[type][tableIndex];
+            }
+
+            if(color==="w")score+=value;
+            else score-=value;
+        }
+    }
+
+    /* Bishop pair */
+    if(whiteBishops>=2)score+=25;
+    if(blackBishops>=2)score-=25;
+
+    /* Center control */
+    const centerSquares=[
+        [3,3],[3,4],[4,3],[4,4]
+    ];
+
+    for(const[row,col]of centerSquares){
+        const piece=position[row][col];
+
+        if(piece){
+            if(colorOf(piece)==="w")score+=8;
+            else score-=8;
+        }
+    }
+
+    /* Pawn advancement */
+    for(let col=0;col<8;col++){
+        let whitePawns=0;
+        let blackPawns=0;
+
+        for(let row=0;row<8;row++){
+            if(position[row][col]==="wP")whitePawns++;
+            if(position[row][col]==="bP")blackPawns++;
+        }
+
+        if(whitePawns>1)score-=12*(whitePawns-1);
+        if(blackPawns>1)score+=12*(blackPawns-1);
+    }
+
+    /* King safety */
+    if(isInCheck(position,"w"))score-=35;
+    if(isInCheck(position,"b"))score+=35;
+
+    /* Mobility */
+    const whiteMoves=getAllLegalMoves(position,"w").length;
+    const blackMoves=getAllLegalMoves(position,"b").length;
+
+    score+=(whiteMoves-blackMoves)*2;
+
+    /* Small development bonus */
+    const startingWhite=[
+        "wN","wB"
+    ];
+
+    const startingBlack=[
+        "bN","bB"
+    ];
+
+    for(let row=0;row<8;row++){
+        for(let col=0;col<8;col++){
+            if(
+                startingWhite.includes(position[row][col])&&
+                row===7
+            ){
+                score-=10;
+            }
+
+            if(
+                startingBlack.includes(position[row][col])&&
+                row===0
+            ){
+                score+=10;
+            }
+        }
+    }
+
+    return score;
+}
+
+/* =========================================================
+   MOVE ORDERING
+========================================================= */
+
+function moveScore(position,move){
+
+    const moving=
+        position[move.from.row][move.from.col];
+
+    let score=0;
+
+    if(move.castle)score+=80;
+
+    if(move.enPassant)score+=105;
+
+    const target=
+        position[move.to.row][move.to.col];
+
+    if(target){
+        score+=
+            VALUES[typeOf(target)]*10-
+            VALUES[typeOf(moving)];
+    }
+
+    /* Promotions */
+    if(
+        typeOf(moving)==="P"&&
+        (move.to.row===0||move.to.row===7)
+    ){
+        score+=900;
+    }
+
+    /* Checks */
+    const test=makeMoveOnBoard(position,move);
+
+    if(isInCheck(test,opposite(colorOf(moving)))){
+        score+=60;
+    }
+
+    return score;
+}
+
+function orderMoves(position,moves){
+    return moves.sort(
+        (a,b)=>
+            moveScore(position,b)-
+            moveScore(position,a)
+    );
+}
+
+/* =========================================================
+   QUIESCENCE
+========================================================= */
+
+function quiescence(
+    position,
+    alpha,
+    beta,
+    maximizing,
+    depth
+){
+
+    const standPat=evaluateBoard(position);
+
+    if(depth<=0){
+        return standPat;
+    }
+
+    if(maximizing){
+        if(standPat>=beta)return beta;
+        alpha=Math.max(alpha,standPat);
+
+        let moves=getAllLegalMoves(position,"w");
+
+        moves=moves.filter(move=>{
+            const target=position[move.to.row][move.to.col];
+            return target||move.enPassant;
+        });
+
+        orderMoves(position,moves);
+
+        for(const move of moves){
+            const child=makeMoveOnBoard(position,move);
+
+            const score=quiescence(
+                child,
+                alpha,
+                beta,
+                false,
+                depth-1
+            );
+
+            alpha=Math.max(alpha,score);
+
+            if(alpha>=beta)break;
+        }
+
+        return alpha;
+    }else{
+        if(standPat<=alpha)return alpha;
+        beta=Math.min(beta,standPat);
+
+        let moves=getAllLegalMoves(position,"b");
+
+        moves=moves.filter(move=>{
+            const target=position[move.to.row][move.to.col];
+            return target||move.enPassant;
+        });
+
+        orderMoves(position,moves);
+
+        for(const move of moves){
+            const child=makeMoveOnBoard(position,move);
+
+            const score=quiescence(
+                child,
+                alpha,
+                beta,
+                true,
+                depth-1
+            );
+
+            beta=Math.min(beta,score);
+
+            if(alpha>=beta)break;
+        }
+
+        return beta;
+    }
+}
+
+/* =========================================================
+   MINIMAX
+========================================================= */
+
+function minimax(
+    position,
+    depth,
+    alpha,
+    beta,
+    maximizing
+){
+
+    const moves=getAllLegalMoves(
+        position,
+        maximizing?"w":"b"
+    );
+
+    if(moves.length===0){
+        if(
+            isInCheck(
+                position,
+                maximizing?"w":"b"
+            )
+        ){
+            return maximizing?-999999:999999;
+        }
+
+        return 0;
+    }
+
+    if(depth<=0){
+        return quiescence(
+            position,
+            alpha,
+            beta,
+            maximizing,
+            2
+        );
+    }
+
+    orderMoves(position,moves);
+
+    if(maximizing){
+
+        let best=-Infinity;
+
+        for(const move of moves){
+
+            const child=
+                makeMoveOnBoard(
+                    position,
+                    move
+                );
+
+            const score=minimax(
+                child,
+                depth-1,
+                alpha,
+                beta,
+                false
+            );
+
+            best=Math.max(best,score);
+            alpha=Math.max(alpha,score);
+
+            if(beta<=alpha)break;
+        }
+
+        return best;
+
+    }else{
+
+        let best=Infinity;
+
+        for(const move of moves){
+
+            const child=
+                makeMoveOnBoard(
+                    position,
+                    move
+                );
+
+            const score=minimax(
+                child,
+                depth-1,
+                alpha,
+                beta,
+                true
+            );
+
+            best=Math.min(best,score);
+            beta=Math.min(beta,score);
+
+            if(beta<=alpha)break;
+        }
+
+        return best;
+    }
+}
+
+/* =========================================================
+   ENGINE MOVE
+========================================================= */
+
+function calculateEngineMoves(){
+
+    const strength=getStrength();
+
+    const depths={
+        1:1,
+        2:2,
+        3:3,
+        4:3,
+        5:4
+    };
+
+    const depth=depths[strength];
+
+    let moves=getAllLegalMoves(board,"b");
+
+    orderMoves(board,moves);
+
+    const scored=[];
+
+    for(const move of moves){
+
+        const child=makeMoveOnBoard(board,move);
+
+        let score=minimax(
+            child,
+            depth-1,
+            -Infinity,
+            Infinity,
+            true
+        );
+
+        /* Black wants the lowest white evaluation */
+        scored.push({
+            move,
+            score
+        });
+    }
+
+    scored.sort(
+        (a,b)=>a.score-b.score
+    );
+
+    return scored;
+}
+
+/* =========================================================
+   CHOOSE ENGINE MOVE
+========================================================= */
+
+function chooseEngineMove(){
+
+    const scored=calculateEngineMoves();
+
+    if(!scored.length)return null;
+
+    const strength=getStrength();
+
+    /*
+       Higher strength = less randomness.
+       Lower strength deliberately allows
+       slightly inferior moves.
+    */
+
+    let candidates;
+
+    if(strength===1){
+        candidates=scored.slice(
+            0,
+            Math.min(8,scored.length)
+        );
+    }else if(strength===2){
+        candidates=scored.slice(
+            0,
+            Math.min(5,scored.length)
+        );
+    }else if(strength===3){
+        candidates=scored.slice(
+            0,
+            Math.min(3,scored.length)
+        );
+    }else{
+        candidates=scored.slice(
+            0,
+            Math.min(2,scored.length)
+        );
+    }
+
+    /*
+       At maximum strength choose the engine's
+       top move almost every time.
+    */
+
+    if(strength>=4){
+        return candidates[0].move;
+    }
+
+    /*
+       Weighted selection.
+    */
+
+    const weights=candidates.map(
+        (_,i)=>Math.max(1,candidates.length-i)
+    );
+
+    let total=weights.reduce(
+        (a,b)=>a+b,
+        0
+    );
+
+    let random=Math.random()*total;
+
+    for(let i=0;i<candidates.length;i++){
+        random-=weights[i];
+
+        if(random<=0){
+            return candidates[i].move;
+        }
+    }
+
+    return candidates[0].move;
+}
+
+/* =========================================================
+   GROQ ASSISTED ENGINE
+========================================================= */
+
+async function askGroqForMove(){
+
+    if(
+        gameOver||
+        turn!=="b"
+    )return;
+
+    const legalMoves=getAllLegalMoves(board,"b");
+
+    if(!legalMoves.length){
+        updateGameState();
+        return;
+    }
+
+    document.getElementById("aiThinking").style.display="block";
+    document.getElementById("status").textContent=
+        "🤖 Groq + engine are thinking...";
+
+    /*
+       First calculate engine candidates.
+       Groq is ONLY allowed to choose from these.
+    */
+
+    const scored=calculateEngineMoves();
+
+    const topCount=
+        getStrength()<=2?6:
+        getStrength()===3?5:
+        4;
+
+    const candidates=scored.slice(
+        0,
+        Math.min(topCount,scored.length)
+    );
+
+    const candidateText=candidates.map(
+        (entry,index)=>
+            `${index+1}. ${moveToUCI(entry.move)}`
+    ).join("\n");
+
+    if(!GROQ_API_KEY){
+
+        const fallback=chooseEngineMove();
+
+        document.getElementById("aiThinking").style.display="none";
+
+        makeRealMove(fallback);
+
+        return;
+    }
+
+    const fen=boardToFEN();
+
+    const prompt=
+`You are Black in a chess game.
+
+FEN:
+${fen}
+
+The local chess engine has already calculated the strongest candidate moves.
+
+You may ONLY choose one of these moves:
+
+${candidateText}
+
+Choose the strongest move from the list.
+
+Do NOT invent a move.
+Do NOT give explanations.
+Reply with ONLY the UCI move, such as e7e5.`;
+
+    try{
+
+        const response=await fetch(
+            GROQ_ENDPOINT,
+            {
+                method:"POST",
+                headers:{
+                    "Content-Type":"application/json",
+                    "Authorization":"Bearer "+GROQ_API_KEY
+                },
+                body:JSON.stringify({
+                    model:GROQ_MODEL,
+                    messages:[
+                        {
+                            role:"system",
+                            content:
+                                "You are a chess move selector. Return ONLY one UCI move from the provided candidate list."
+                        },
+                        {
+                            role:"user",
+                            content:prompt
+                        }
+                    ],
+                    temperature:0,
+                    max_completion_tokens:100
+                })
+            }
+        );
+
+        const raw=await response.text();
+
+        if(!response.ok){
+            throw new Error(
+                "Groq API error "+
+                response.status+
+                ": "+
+                raw
+            );
+        }
+
+        const data=JSON.parse(raw);
+
+        let text="";
+
+        if(
+            data.choices&&
+            data.choices[0]&&
+            data.choices[0].message
+        ){
+            text=
+                data.choices[0].message.content||
+                "";
+        }
+
+        /*
+           GPT-OSS can sometimes return reasoning
+           without content. We deliberately DO NOT
+           treat that as a chess move.
+        */
+
+        const normalized=text
+            .toLowerCase()
+            .trim();
+
+        let chosen=null;
+
+        for(const entry of candidates){
+
+            const uci=
+                moveToUCI(entry.move);
+
+            if(
+                normalized.includes(uci)
+            ){
+                chosen=entry.move;
+                break;
+            }
+        }
+
+        /*
+           If Groq fails, the engine still plays.
+        */
+
+        if(!chosen){
+            console.warn(
+                "Groq did not select a candidate. Engine fallback."
+            );
+
+            chosen=chooseEngineMove();
+        }
+
+        document.getElementById(
+            "aiThinking"
+        ).style.display="none";
+
+        makeRealMove(chosen);
+
+    }catch(error){
+
+        console.error(
+            "Groq failed:",
+            error
+        );
+
+        const fallback=chooseEngineMove();
+
+        document.getElementById(
+            "aiThinking"
+        ).style.display="none";
+
+        makeRealMove(fallback);
+    }
+}
+
+/* =========================================================
+   REAL MOVE
+========================================================= */
+
+function makeRealMove(move,promotion=null){
+
+    const from=move.from;
+    const to=move.to;
+
+    const piece=
+        board[from.row][from.col];
+
+    const captured=
+        move.enPassant
+            ?board[from.row][to.col]
+            :board[to.row][to.col];
+
+    updateCastlingRights(
+        piece,
+        from,
+        to,
+        captured
+    );
+
+    if(move.castle==="king"){
+
+        board[to.row][6]=piece;
+        board[from.row][from.col]=null;
+
+        board[to.row][5]=
+            board[to.row][7];
+
+        board[to.row][7]=null;
+
+    }else if(move.castle==="queen"){
+
+        board[to.row][2]=piece;
+        board[from.row][from.col]=null;
+
+        board[to.row][3]=
+            board[to.row][0];
+
+        board[to.row][0]=null;
+
+    }else{
+
+        if(move.enPassant){
+            board[from.row][to.col]=null;
+        }
+
+        board[to.row][to.col]=piece;
+        board[from.row][from.col]=null;
+
+        if(
+            typeOf(piece)==="P"&&
+            (to.row===0||to.row===7)
+        ){
+
+            if(!promotion){
+
+                pendingPromotion={
+                    row:to.row,
+                    col:to.col,
+                    color:colorOf(piece),
+                    move
+                };
+
+                showPromotionMenu();
+                return;
+            }
+
+            board[to.row][to.col]=
+                colorOf(piece)+promotion;
+        }
+    }
+
+    enPassantTarget=null;
+
+    if(
+        typeOf(piece)==="P"&&
+        Math.abs(to.row-from.row)===2
+    ){
+
+        enPassantTarget={
+            row:(from.row+to.row)/2,
+            col:from.col
+        };
+    }
+
+    moveHistory.push(
+        moveToUCI(move,promotion)
+    );
+
+    finishMove();
+}
+
+/* =========================================================
+   FINISH MOVE
+========================================================= */
+
+function finishMove(){
+
+    selected=null;
+    legalMoves=[];
+
+    turn=opposite(turn);
+
+    updateGameState();
+    renderBoard();
+
+    if(
+        !gameOver&&
+        turn==="b"&&
+        !pendingPromotion
+    ){
+        setTimeout(
+            askGroqForMove,
+            150
+        );
+    }
+}
+
+/* =========================================================
+   PROMOTION
+========================================================= */
+
+function showPromotionMenu(){
+
+    const overlay=
+        document.getElementById(
+            "promotionOverlay"
+        );
+
+    const choices=
+        document.getElementById(
+            "promotionChoices"
+        );
+
+    choices.innerHTML="";
+
+    const color=pendingPromotion.color;
+
+    for(const type of["Q","R","B","N"]){
+
+        const button=
+            document.createElement("button");
+
+        button.className="promotionButton";
+
+        button.textContent=
+            PIECES[color+type];
+
+        button.onclick=
+            ()=>promote(type);
+
+        choices.appendChild(button);
+    }
+
+    overlay.style.display="flex";
+}
+
+function promote(type){
+
+    if(!pendingPromotion)return;
+
+    const{
+        row,
+        col,
+        color,
+        move
+    }=pendingPromotion;
+
+    board[row][col]=color+type;
+
+    pendingPromotion=null;
+
+    document.getElementById(
+        "promotionOverlay"
+    ).style.display="none";
+
+    enPassantTarget=null;
+
+    moveHistory.push(
+        moveToUCI(move,type)
+    );
+
+    finishMove();
+}
+
+/* =========================================================
+   PLAYER
+========================================================= */
+
+function clickSquare(row,col){
+
+    if(
+        gameOver||
+        pendingPromotion||
+        turn!=="w"
+    )return;
+
+    const piece=board[row][col];
+
+    if(!selected){
+
+        if(
+            piece&&
+            colorOf(piece)==="w"
+        ){
+
+            selected={row,col};
+
+            legalMoves=
+                getLegalMovesForPiece(
+                    board,
+                    row,
+                    col,
+                    "w"
+                );
+
+            renderBoard();
+        }
+
+        return;
+    }
+
+    if(
+        piece&&
+        colorOf(piece)==="w"
+    ){
+
+        selected={row,col};
+
+        legalMoves=
+            getLegalMovesForPiece(
+                board,
+                row,
+                col,
+                "w"
+            );
+
+        renderBoard();
+
+        return;
+    }
+
+    const move=
+        legalMoves.find(
+            m=>
+                m.to.row===row&&
+                m.to.col===col
+        );
+
+    if(!move){
+
+        selected=null;
+        legalMoves=[];
+        renderBoard();
+
+        return;
+    }
+
+    makeRealMove(move);
+}
+
+/* =========================================================
+   GAME STATE
+========================================================= */
+
+function updateGameState(){
+
+    const moves=
+        getAllLegalMoves(
+            board,
+            turn
+        );
+
+    const inCheck=
+        isInCheck(
+            board,
+            turn
+        );
+
+    if(moves.length===0){
+
+        gameOver=true;
+
+        if(inCheck){
+
+            const winner=
+                turn==="w"?"Black":"White";
+
+            document.getElementById(
+                "status"
+            ).textContent=
+                `♚ Checkmate! ${winner} wins!`;
+
+        }else{
+
+            document.getElementById(
+                "status"
+            ).textContent=
+                "🤝 Stalemate — draw!";
+        }
+
+        return;
+    }
+
+    gameOver=false;
+
+    if(inCheck){
+
+        document.getElementById(
+            "status"
+        ).textContent=
+            turn==="w"
+                ?"⚠️ White is in check!"
+                :"⚠️ Black is in check!";
+
+    }else{
+
+        document.getElementById(
+            "status"
+        ).textContent=
+            turn==="w"
+                ?"White to move ♙"
+                :"Groq + Engine 🤖";
+    }
+}
+
+/* =========================================================
+   RENDER
+========================================================= */
+
+function renderBoard(){
+
+    const boardElement=
+        document.getElementById("board");
+
+    boardElement.innerHTML="";
+
+    const files=[
+        "a","b","c","d",
+        "e","f","g","h"
+    ];
+
+    const checkedKing=
+        isInCheck(board,turn)
+            ?findKing(board,turn)
+            :null;
+
+    for(let row=0;row<8;row++){
+
+        for(let col=0;col<8;col++){
+
+            const square=
+                document.createElement("div");
+
+            square.className="square";
+
+            square.classList.add(
+                (row+col)%2===0
+                    ?"light"
+                    :"dark"
+            );
+
+            if(
+                selected&&
+                selected.row===row&&
+                selected.col===col
+            ){
+                square.classList.add("selected");
+            }
+
+            const move=
+                legalMoves.find(
+                    m=>
+                        m.to.row===row&&
+                        m.to.col===col
+                );
+
+            if(move){
+
+                if(
+                    board[row][col]||
+                    move.enPassant
+                ){
+                    square.classList.add("capture");
+                }else{
+                    square.classList.add("legal");
+                }
+            }
+
+            if(
+                checkedKing&&
+                checkedKing.row===row&&
+                checkedKing.col===col
+            ){
+                square.classList.add("in-check");
+            }
+
+            const piece=board[row][col];
+
+            if(piece){
+
+                const pieceElement=
+                    document.createElement("span");
+
+                pieceElement.textContent=
+                    PIECES[piece];
+
+                pieceElement.className=
+                    colorOf(piece)==="w"
+                        ?"white-piece"
+                        :"black-piece";
+
+                square.appendChild(pieceElement);
+            }
+
+            if(col===0){
+
+                const rank=
+                    document.createElement("span");
+
+                rank.className="coordinate rank";
+                rank.textContent=8-row;
+
+                square.appendChild(rank);
+            }
+
+            if(row===7){
+
+                const file=
+                    document.createElement("span");
+
+                file.className="coordinate file";
+                file.textContent=files[col];
+
+                square.appendChild(file);
+            }
+
+            square.onclick=
+                ()=>clickSquare(row,col);
+
+            boardElement.appendChild(square);
+        }
+    }
+}
+
+/* =========================================================
+   FEN
+========================================================= */
+
+function boardToFEN(){
+
+    let fen="";
+
+    const symbols={
+        wK:"K",wQ:"Q",wR:"R",
+        wB:"B",wN:"N",wP:"P",
+        bK:"k",bQ:"q",bR:"r",
+        bB:"b",bN:"n",bP:"p"
+    };
+
+    for(let row=0;row<8;row++){
+
+        let empty=0;
+
+        for(let col=0;col<8;col++){
+
+            const piece=board[row][col];
+
+            if(!piece){
+                empty++;
+            }else{
+
+                if(empty){
+                    fen+=empty;
+                    empty=0;
+                }
+
+                fen+=symbols[piece];
+            }
+        }
+
+        if(empty)fen+=empty;
+
+        if(row<7)fen+="/";
+    }
+
+    fen+=turn==="w"?" w ":" b ";
+
+    let rights="";
+
+    if(castling.wK)rights+="K";
+    if(castling.wQ)rights+="Q";
+    if(castling.bK)rights+="k";
+    if(castling.bQ)rights+="q";
+
+    fen+=rights||"-";
+    fen+=" ";
+
+    fen+=
+        enPassantTarget
+            ?squareName(
+                enPassantTarget.row,
+                enPassantTarget.col
+            )
+            :"-";
+
+    return fen;
+}
+
+/* =========================================================
+   SAVE KEY
+========================================================= */
+
+function saveKey(){
+
+    const key=
+        document.getElementById(
+            "apiKey"
+        ).value.trim();
+
+    if(!key){
+        alert("Paste your Groq API key first.");
+        return;
+    }
+
+    GROQ_API_KEY=key;
+
+    localStorage.setItem(
+        "groqChessKey",
+        key
+    );
+
+    document.getElementById(
+        "status"
+    ).textContent=
+        "✅ Groq key saved. White to move.";
+}
+
+/* =========================================================
+   RESTART
+========================================================= */
+
+function restartGame(){
+
+    board=cloneBoard(
+        STARTING_BOARD
+    );
+
+    turn="w";
+    selected=null;
+    legalMoves=[];
+    gameOver=false;
+    pendingPromotion=null;
+    enPassantTarget=null;
+    moveHistory=[];
+
+    castling={
+        wK:true,
+        wQ:true,
+        bK:true,
+        bQ:true
+    };
+
+    document.getElementById(
+        "promotionOverlay"
+    ).style.display="none";
+
+    document.getElementById(
+        "aiThinking"
+    ).style.display="none";
+
+    updateGameState();
+    renderBoard();
+}
+
+/* =========================================================
+   START
+========================================================= */
+
+updateGameState();
+renderBoard();
+
+</script>
+</body>
+</html>
